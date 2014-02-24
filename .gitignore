@@ -1,0 +1,717 @@
+class AVL<K extends Comparable<K>,V> {
+
+private Node<K,V> root=null; 
+private int size;  // number of nodes currently on the tree
+
+public int getSize() { return size; }
+public Node<K,V> getRoot() { return root; }
+
+//================================================
+
+AVL()  { 
+  // create an empty tree
+
+  root = null;
+  size = 0;  
+}  
+
+//================================================
+
+class List {
+  Node<K,V> node;
+  List prev, next;
+  List() {}
+  List(Node<K,V> node) {  this.node=node;  }
+}
+
+//================================================
+
+class Node<K,V>  { 
+// key-value pair
+	// also putting a value on the node. Key is the key for the sorting the values. 
+	// value of a node can be null at anytime.
+
+private K key;
+private V value=null; 
+
+private Node<K,V> lChild=null, rChild=null;  // left- and right- children of this node
+private Node<K,V> parent=null;
+
+private int height=0; // largest distance to a descendant-leaf from itself. height=0 on leaf nodes. 
+
+public Node<K,V> getParent() {return parent;}
+public Node<K,V> getLChild() {return rChild;}
+public Node<K,V> getRChild() {return lChild;}
+public int getHeight() {return height;}
+public V getValue() { return value; }
+public K getKey() { return key; }
+public V setValue(V v) { V t=value; value=v; return t; } 
+
+
+Node (K k, V v) { 
+  key=k; 
+  value=v; 
+}
+
+Node (K k) { key=k; }
+
+} // Node
+
+//================================================
+
+public Node<K,V> CommonAncestor(Node<K,V> node1, Node<K,V> node2) {
+  // assumes node1 & node2 are pointers (possibly null) to two nodes on the tree. 
+	// returns the lowest-level common ancestor of node1 & node2. 
+
+  if ( root==null || node1==null || node2==null ) return null; 
+  return commonAncOfNodesRec (root, node1, node2);
+}
+
+//================================================
+
+private Node<K,V> commonAncOfNodesRec (Node<K,V> R, Node<K,V> node1, Node<K,V> node2) {
+  // called by CommonAncestor() 
+  // doesn't use the fact that tree is an AVL-tree-- works for any binary tree. 
+  // assumes the keys are unique.
+
+  if (R==node1) return node1;
+  if (R==node2) return node2;
+
+  if (node1.key.compareTo(R.key)*node2.key.compareTo(R.key)<0 ) return R; 
+
+  if (node1.key.compareTo(R.key)>0) 
+	 return commonAncOfNodesRec(R.rChild, node1, node2); 
+    else return commonAncOfNodesRec(R.lChild, node1, node2); 
+}
+
+//================================================
+
+public boolean compare (Node<K,V> node, Node<K,V> foreignNode ) {  
+  // tells whether two binary trees have the same keys and same structure.
+  // node: the root of "this" (sub)tree
+	// returns true iff the trees rooted at "node" are the same or clones of "foreignNode" one another.
+
+  if ( node==null && foreignNode == null ) return true; 
+
+  if ( node==null || foreignNode == null )   // exactly one null
+	return false; 
+
+  if ( node.key.compareTo(foreignNode.key) != 0 ) // neither node is null, but keys not matching
+	return false;  
+
+  // current root all tested & well-- now compare the subtree on both sides.
+  return compare(node.lChild, foreignNode.lChild) && compare(node.rChild, foreignNode.rChild);
+}
+
+//================================================
+
+public void makeEmpty() {  
+  root=null;
+  size=0;
+}
+
+//================================================
+
+private void checkBrute(Node<K,V> node)  {  // a helper method
+  // tells whether the tree is AVL/not. 
+
+  if (node==null) return;
+  int lHeight=(node.lChild==null?-1:node.lChild.height);
+  int rHeight=(node.rChild==null?-1:node.rChild.height);
+  int max=lHeight;  if (max<rHeight) max=rHeight;
+
+  if (node.height!=max+1) 
+	System.out.println(" height of "+node.key+" incorrect wrt child-heights");
+  if (node.lChild==null && node.rChild==null && node.height!=0) 
+	System.out.println("node "+node.key+" is a leaf but its height isnt 0.");
+
+  if (node.lChild!=null && node.lChild.parent!=node) 
+	System.out.println("node "+node.key+" has link conflict with its leftChild");
+  if (node.rChild!=null && node.rChild.parent!=node) 
+	System.out.println("node "+node.key+" has link conflict with its rightChild");
+
+  checkBrute(node.lChild);
+  checkBrute(node.rChild);
+}
+
+//================================================
+
+public int treeDepth(Node <K,V> node) {  
+  // returns the depth of the (sub)tree rooted at "node"
+	  // exact equivalent of "return node.height;" on an AVL tree of this form.
+
+  if (node==null) return -1;
+  return 1+Math.max( treeDepth(node.lChild), 
+		     treeDepth(node.rChild) );
+}
+
+//================================================
+
+public void printListFull(List k) {
+
+  List n=null;
+  if (k==null) {
+    System.out.println("\nThe list is empty.");
+    return;
+  }
+
+  System.out.println("\nHere is the nodes on the list:");
+  System.out.println(  "=============================");
+  while (k!=null) {
+    System.out.println("Key: "+k.node.key
+			+"\tParent: "+(k.node.parent==null?" - ":k.node.parent.key)
+			+"\tLeft: "+(k.node.lChild==null?" - ":k.node.lChild.key)
+			+"\tRight: "+(k.node.rChild==null?" - ":k.node.rChild.key)
+		      ); 
+    n=k; 
+    k=k.next;
+  }
+  System.out.println(  "======== END OF LIST ========");
+}
+
+//================================================
+
+public int diameter(Node<K,V> root) {  
+/* 
+equivalent to:
+
+  return (root==null?-1: (root.lChild==null?0:1+root.lChild.height)
+			+(root.rChild==null?0:1+root.rChild.height)
+	 ); 
+*/
+  // returns the diameter of the (sub)tree rooted at "root". 
+	// works for any binary tree-- not just AVL.
+	// relies on treeDepth().
+  if (root==null) return -1;
+  int leftDia=diameter(root.lChild);
+  int rightDia=diameter(root.rChild);
+  int maxDia=(leftDia>rightDia?leftDia:rightDia);
+  int thisDia=2+treeDepth(root.lChild)+ treeDepth(root.rChild);
+  return (thisDia>maxDia?thisDia:maxDia);
+}
+
+//================================================
+
+private List concatLists(List l1, List l2) {  // helper method
+  // returns l1+l2 in that order.
+  List hold=l1;
+  if (l1==null) return l2;
+  while (l1.next!=null) l1=l1.next; 
+  l1.next=l2; 
+  if (l2!=null) l2.prev=l1;
+  return hold;
+}
+
+//================================================
+
+public Node<K,V> clone (Node<K,V> root) {
+  // clones the tree rooted at "root" & returns the root of the clone.
+	// the clone is an instance of "this" tree. 
+		// no height values on nodes.
+		// no tree size or tree root info either. 
+  // clones the following fields-- all of which are on Node:
+	// key, value, parent, lChild, rChild.
+
+  if (root==null) return null;
+
+  Node<K,V> cRoot=new Node<K,V>(root.key, root.value);
+
+  if (root.lChild!=null) {
+    cRoot.lChild=clone (root.lChild); 
+    cRoot.lChild.parent=cRoot;
+  }
+
+  if (root.rChild!=null) {
+    cRoot.rChild=clone (root.rChild); 
+    cRoot.rChild.parent=cRoot;
+  }
+ 
+  return cRoot;
+}
+
+//================================================
+
+public List atLvl(Node<K,V> node, int level) {
+  // returns the #nodes at level "level" in the (sub)tree rooted at "node".
+	// the returned list is in increasing order of keys. 
+  // root: level 0; 2 children of root: level 1, ... . 
+	// Note: #nodes at level i \in [0, 2^n]. 
+  // doesnt use the fact that the tree is AVL-balanced-- works for any binary tree. 
+
+  if (node==null || level<0) return null;
+
+  if (level==0) return concatLists(new List(node), null);  
+	   else return concatLists( atLvl(node.lChild, level-1), 
+				    atLvl(node.rChild, level-1) );
+}
+
+//================================================
+
+public void preOrderWPar(Node<K,V> node) {  
+  // prints the tree structure in preorder.
+
+  System.out.print(" (");
+  System.out.print(node==null?" . ":node.key);
+
+  if (node==null)  {  
+	  System.out.print(") "); 
+	  return; 
+  }
+
+  if (node.lChild==null && node.rChild==null) {  
+  	System.out.print(") "); 
+	  return; 
+  }
+
+  preOrderWPar(node.lChild); 
+  System.out.print(", "); 
+  preOrderWPar(node.rChild); 
+  System.out.print(") "); 
+}
+
+//================================================
+
+public void postOrderWPar (Node<K,V> node) { 
+  // postOrder of the above.
+
+  System.out.print(" (");
+  System.out.print(node==null?" . ":"");
+
+  if (node==null)  {  
+  	System.out.print(") "); 
+	  return; 
+  }
+
+  if (node.lChild==null && node.rChild==null) {
+  	System.out.print(node.key+") "); 
+	  return; 
+  }
+
+  postOrderWPar(node.lChild); 
+  System.out.print(", "); 
+  postOrderWPar(node.rChild); 
+  System.out.print(node.key+") "); 
+}
+
+//================================================
+
+public void inOrder(Node<K,V> node) {  
+  // prints the nodes in increasing order of keys 
+	// inOrder traversal of the sub-tree rooted at "node". 
+
+
+  if (node==null)  { // empty root
+  	System.out.println("No tree to traverse"); 
+	  return; 
+  }
+
+  if (node.lChild!=null) inOrder(node.lChild);
+  System.out.println( (node==root?"->":"")+ "key: "+node.key + 
+	  "\tlChild: "+ (node.lChild!=null?node.lChild.key:"_") + 
+  	"\trChild: "+ (node.rChild!=null?node.rChild.key:"_") + 
+	  "\tparent: "+ (node.parent!=null?node.parent.key:"_") + 
+  	"\theight: "+ node.height );
+  if (node.rChild!=null) inOrder(node.rChild);
+}
+
+//================================================
+
+public List inOrderList(Node<K,V> node) {  
+  // returns a linked-list of inOrder traversal of the sub-tree rooted at "node". 
+	// use PrintListFull() to print this list. 
+
+  if (node==null)  return null;
+
+  List list = concatLists(new List(node), inOrderList(node.rChild));  
+  return concatLists(inOrderList(node.lChild), list);
+}  // inOrderList()
+
+//================================================
+
+public Node<K,V> searchTree (K key) {  // caller of search() on the entire tree.
+  // if there exists, returns a single node with "key" in the subtree rooted at "node".
+	// the node returned is the first found, and is closest to the tree root among all in case of multiple "key"s in the tree. 
+
+  return search (root, key);
+} 
+
+//================================================
+
+public List searchAll(Node<K,V> node, K key) {   
+  // returns the node(s) with "key" in the subtree rooted at "node" 
+	// if there are multiple nodes with this "key" value, brings all of them.
+
+  if (key==null) return null;
+  
+  Node<K,V>  currentNode = search(node, key); 
+  if (currentNode==null) return null;
+  // at this point, if there are other nodes with the same key, 
+	// they are on the subtree rooted at "currentNode". 
+	// Note: search() always returns the highest-level "key"-- the one closest to the root at the subtree rooted at "node".  
+
+  return concatLists(concatLists( new List(currentNode), searchAll(currentNode.lChild, key)
+                         				), searchAll(currentNode.rChild, key)
+		                );  
+}
+
+//================================================
+
+public List searchTreeAll(K key) {  // caller of searchAll() on the entire tree.
+  return searchAll(root, key);
+}
+
+//================================================
+
+public Node<K,V> search (Node<K,V> node, K key) {  
+  // returns the subtree rooted at "node" for the "key"
+	// if there are multiple nodes with this "key" value, brings anyone of them-- the first it finds. 
+
+  if (node==null || key==null) return null;
+  else {
+    int z=key.compareTo(node.key);
+    if (z==0) return node;
+    else {
+    	  if (z<0)
+      	    if (node.lChild!=null)  return search(node.lChild, key);
+	    else return null; 
+    	  else 
+      	    if (node.rChild!=null)  return search(node.rChild, key);
+	    else return null; 
+    }
+  }
+}  // search()
+
+//================================================
+
+private Node <K,V> insertNode (K key, V value, boolean noDuplicates, Node<K,V> currentNode) {  
+  // the tree is AVL-balanced before & after this method is invoked. 
+	// if !noDuplicates, merely inserts <key, value> without minding whether the key is already on the tree, and returns a pointer to that node inserted. 
+	// if noDuplicates, inserts <key,value> if key is not on the tree and returns a pointer to the inserted tree node. 
+		// if key is on the tree, doesn't insert it and returns the first node to be found with that key. 
+		// if there are multiple nodes with that key, returns only one. 
+
+  Node<K,V> node= new Node<K,V> (key, value);
+  if (root==null) { 
+    root=node; 
+    size++;
+    return root;  
+  }
+
+  if ( node.key.compareTo(currentNode.key)== 0 && noDuplicates) 
+	{ System.out.println(node.key +" already on tree"); return currentNode;  }
+
+  if ( node.key.compareTo(currentNode.key)<0 ) 
+     if (currentNode.lChild != null) insertNode(key, value, noDuplicates, currentNode.lChild);
+      	  else { 
+		node.parent = currentNode; 
+		currentNode.lChild=node; 
+		size++;
+		balance(currentNode); 
+		return node;
+	       }
+      else if (currentNode.rChild != null) insertNode(key, value, noDuplicates, currentNode.rChild);
+      	     else { 
+		   node.parent = currentNode; 
+		   currentNode.rChild=node; 
+		   size++;
+		   balance(currentNode); 
+		   return node;
+		  }
+  return node;
+} // insertNode
+
+//================================================
+
+
+public Node <K,V> insert (K key, V value) { 
+  // allows multiple keys on the tree
+
+  return insertNode(key, value, false, root);
+}
+
+//================================================
+
+public Node <K,V> insertUnique (K key, V value) {  
+  // doesn't allow multiple keys on the tree
+
+  return insertNode(key, value, true, root);
+}
+
+//================================================
+
+public Node<K,V> deleteAll(K key, boolean all) {
+  // if all=true, deletes all nodes with key="key"
+  // if all=false, deletes the first found node with key="key"
+
+  if (key==null) { System.out.println("null key-- nothing to delete."); return null; }
+  Node<K,V> n=delete(key);
+  if (all) 
+    while (n!=null)
+      n=delete(key);
+  return n;
+}
+
+//================================================
+
+private void deleteLeaf(Node<K,V> node) {  
+  // deletes the node "node" and balances the tree. 
+	// the tree is balanced before & after this ethod is invoked. 
+	// node is assumed to be a leaf. 
+	// node is never the root when this function is called. 
+
+  if (node.parent.lChild==node) {
+    node.parent.lChild=null; 
+    if (node.parent.rChild==null) balance(node.parent);
+  } else {
+	  node.parent.rChild=null; 
+    if (node.parent.lChild==null) balance(node.parent); 
+  }
+  size--;
+}
+
+//================================================
+
+public Node<K,V> delete(K key) { 
+  // deletes the first found node with key="key" and returns that node. 
+	// makes lChild, rChild and parent links null before returning that node.   
+
+  Node<K,V> node=searchTree(key);
+  if (node==null) return null;
+
+  if (node.lChild==null && node.rChild==null && node.parent==null) { // root -- single-node tree
+    makeEmpty(); 
+    return node;  
+  }
+
+  Node<K,V> currentNode;
+  if (node.rChild==null && node.lChild==null) { // (node.height==0): node to be deleted is a leaf
+    currentNode=node.parent;
+    if (currentNode.rChild==node) deleteLeaf(currentNode.rChild); 
+       else deleteLeaf(currentNode.lChild);
+    node.parent=null;
+    return node;
+  }
+
+  Node<K,V> aNode; 
+  Node<K,V> bNode=new Node<K,V>(node.key, node.value);   // hold the node to return
+  // at this point-- node to be deleted is not a leaf
+
+  if ( !(node.lChild!=null && node.rChild!=null) ) { // node has exactly one child 
+     moveChildUp(node);  // moveChildUp decrements the size
+   } else {  	// node has both children	
+	if (node.lChild.height>node.rChild.height)   // just a tie-breaker
+	  aNode=getMax(node.lChild); 
+	  else aNode=getMin(node.rChild); 
+	node.key=aNode.key; 
+	node.value=aNode.value; 
+
+	// aNode-- the node to be deleted is either a leaf or has exactly one child. can not have both children. 
+	if (aNode.lChild==null && aNode.rChild==null) { // if a leaf 
+	  deleteLeaf(aNode);  // deleteLeaf decrements the size
+	  return bNode; 
+	} else {  // exactly one child
+      		moveChildUp(aNode);
+         } 
+     } // else
+
+  return bNode;
+} // delete
+
+//================================================
+
+private void moveChildUp (Node<K,V> node) {  
+  // assumes "node" is a node with exactly one child. 
+	// deletes "node" and moves that one child of it to its place. 
+	// doesn't do any balancing. 
+	// decrements the size.
+	// node can be the root but never on a single-node tree. 
+
+  Node<K,V> n;
+  if (node.lChild==null) n=node.rChild;  // look-up the onle child to be moved up
+    else n=node.lChild;
+
+  n.parent=node.parent; 
+
+  if (node==root) { 
+    root=n; 
+    return;
+  }
+
+  if (node.parent.rChild==node) node.parent.rChild=n; 
+    else node.parent.lChild=n;
+  size--;
+
+  balance(n.parent);
+}
+
+//================================================
+
+private void balance(Node<K,V> node) {
+  // method to balance the tree right where it's unbalanced. 
+	// "node" is the node where it is potentially unbalanced. 
+	// left- & right- subtrees of "node" are balanced.
+	// the right- and left- subtrees of "node" have the right heights on them.
+	// "node" and its ancestors may/not have the right heights set. 
+  
+  int leftSubHeight =node.lChild==null?-1:node.lChild.height;
+  int rightSubHeight=node.rChild==null?-1:node.rChild.height; 
+  int maxH;
+
+  if (node==root)  { // no unbalance
+    node.height=rightSubHeight+1;
+    if (leftSubHeight>rightSubHeight) 
+      node.height=leftSubHeight+1;
+    return; 
+  }
+  for (;;)  {
+    if (Math.abs(leftSubHeight-rightSubHeight)>1 ) break; // found the unbalanced spot 
+    maxH=rightSubHeight; 
+    if (maxH<leftSubHeight)  maxH=leftSubHeight;
+    if (node.height==maxH+1) // no unbalance at this point, and teh heights are right
+       return; 
+    node.height=maxH+1;  // node is balanced itself, set its height & go look one level up
+    if (node==root) break; 
+    node=node.parent; 
+    leftSubHeight=node.lChild==null?-1:node.lChild.height;
+    rightSubHeight=node.rChild==null?-1:node.rChild.height;
+  } // for (;;) 
+
+  if (Math.abs(leftSubHeight-rightSubHeight)<=1) // this is the case of exiting at the root, but the root itself is unbalanced.
+    return;
+
+  Node<K,V> n=new Node<K,V>(node.key, node.value);
+  if (rightSubHeight>leftSubHeight) {  
+    if ( (node.rChild.lChild==null?-1:node.rChild.lChild.height) 
+    	 > (node.rChild.rChild==null?-1:node.rChild.rChild.height) )  
+		subRotate(node.rChild); 
+    n.rChild=node.rChild.lChild;
+    n.lChild=node.lChild;
+    n.parent=node.rChild;
+    if (node.rChild.lChild!=null) node.rChild.lChild.parent=n;
+    node.rChild.parent=node.parent;////////////
+    node.rChild.lChild=n;
+    if (node.lChild!=null) node.lChild.parent=n;
+    if (node==root) root=node.rChild;
+  } else {
+    if ( (node.lChild.rChild==null?-1:node.lChild.rChild.height)
+	  > (node.lChild.lChild==null?-1:node.lChild.lChild.height) )  
+		subRotate(node.lChild); 
+    n.lChild=node.lChild.rChild;
+    n.rChild=node.rChild;
+    n.parent=node.lChild;
+    if (node.lChild.rChild!=null) node.lChild.rChild.parent=n;  
+    node.lChild.parent=node.parent;
+    node.lChild.rChild=n;
+    if (node.rChild!=null) node.rChild.parent=n;
+    if (node==root) root=node.lChild;
+  }
+
+  if (node.parent!=null)
+    if (node.parent.rChild==node)  node.parent.rChild=n.parent;
+      else node.parent.lChild=n.parent;
+
+  maxH=n.lChild==null?-1:n.lChild.height;
+  rightSubHeight=n.rChild==null?-1:n.rChild.height; 
+  if (rightSubHeight>maxH) maxH=rightSubHeight;
+  n.height=maxH+1;
+  n.parent.height=n.height+1;
+
+}
+
+//================================================
+
+private void subRotate(Node<K,V> node) {  
+   // rotates the subtrees of node s.t. their balances are switched now:
+		// if the left-subtree was greater in height than the right-subtree before the call to subRotate, 
+			// it's the other way round after the call to subRotate: the right-subtree height is greater now. 
+	// the heights of the left- and right-subtrees of "node" are different-- that's why this method is called. 
+	// "node" and all its children are balanced before & after this method runs. 
+	// this is the suplementary rotate for the real one. 
+  // the subtree rooted at node is balanced & of correct heights before & after this method is invoked. 
+
+  Node<K,V> n=new Node<K,V>(node.key, node.value);
+  if ( (node.lChild==null?-1:node.lChild.height)
+     > (node.rChild==null?-1:node.rChild.height) ) {
+    n.lChild=node.lChild.rChild;  
+    n.parent=node.lChild; 
+    n.rChild=node.rChild;
+
+    if (node.lChild.rChild!=null) node.lChild.rChild.parent=n;
+    if (node.rChild!=null) node.rChild.parent=n;
+
+    node.lChild.parent=node.parent;
+    node.lChild.rChild=n; 
+    if (node.parent!=null) 
+      if (node.parent.rChild==node) node.parent.rChild=node.lChild; 
+	else node.parent.lChild=node.lChild; 
+  } else {
+    n.rChild=node.rChild.lChild; 
+    n.parent=node.rChild; 
+    n.lChild=node.lChild;
+    if (node.rChild.lChild!=null) node.rChild.lChild.parent=n;
+    if (node.lChild!=null) node.lChild.parent=n;
+    node.rChild.parent=node.parent;
+    node.rChild.lChild=n; 
+    if (node.parent!=null) 
+      if (node.parent.rChild==node) node.parent.rChild=node.rChild; 
+      	else node.parent.lChild=node.rChild; 
+  }
+  n.height=node.height-1;
+  n.parent.height=node.height;
+}  // subRotate
+
+//================================================
+
+public Node<K,V> getNext(Node<K,V> node) {  // returns the tree node that is one-place after "node" in the inOrder traversal.
+
+  if (getMin(node.rChild)==null) {
+	  while (node.parent!=null && node.parent.lChild!=node) 
+	    node=node.parent;
+  	return node.parent;
+  }
+  return getMin(node.rChild);
+}
+
+//================================================
+
+public Node<K,V> getPrev(Node<K,V> node) {  // returns the tree node that is one-place before "node" in the inOrder traversal.
+
+  if (getMax(node.lChild)==null) {
+	while (node.parent!=null && node.parent.rChild!=node) 
+	  node=node.parent;
+  	return node.parent;
+  }
+  return getMax(node.lChild);
+}
+
+//================================================
+
+private Node<K,V> getMax(Node<K,V> node) {  // returns the node with the maximum key within the subtree rooted at "node".
+  if (node==null ) return node;
+  return (node.rChild==null?node:getMax(node.rChild) ); 
+}
+
+public Node<K,V> getTreeMax() {  // returns the node with the maximum key in the tree. 
+  return getMax(this.root);
+}
+
+//================================================
+
+private Node<K,V> getMin(Node<K,V> node) {  // returns the node with the minimum key within the subtree rooted at "node".
+  if (node==null) return node;
+  return (node.lChild==null?node:getMin(node.lChild));
+}
+
+public Node<K,V> getTreeMin() {  // returns the node with the maximum key in the tree. 
+  return getMin(this.root);
+}
+
+//================================================
+
+public static <K,V>void main (String ar[]) {
+
+AVL<Integer,Number> tree = new AVL<Integer,Integer>();
+tree.insert(1, null);
+}  
+}
+
