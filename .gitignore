@@ -706,12 +706,5 @@ public Node<K,V> getTreeMin() {  // returns the node with the maximum key in the
   return getMin(this.root);
 }
 
-//================================================
-
-public static <K,V>void main (String ar[]) {
-
-AVL<Integer,Number> tree = new AVL<Integer,Integer>();
-tree.insert(1, null);
-}  
 }
 
